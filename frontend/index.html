@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent Studio Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background-color: #ffffff;
+            border-radius: 1rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        textarea {
+            min-height: 200px;
+            resize: vertical;
+        }
+
+        pre {
+            background-color: #e2e8f0;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .loading-spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #3b82f6;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 0.5rem;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-4xl font-extrabold text-gray-900 text-center mb-6">
+            AI Agent Studio Simulator
+        </h1>
+        <p class="text-lg text-gray-700 text-center mb-8">
+            This interface simulates a Low-Code/No-Code platform. Enter your OpenAI API Key and paste your invoice
+            content below
+            to run the Invoice Processing Agent.
+        </p>
+
+        <div class="flex flex-col gap-4">
+            <label for="openaiApiKey" class="text-xl font-semibold text-gray-800">
+                Your OpenAI API Key:
+            </label>
+            <input type="password" id="openaiApiKey"
+                class="w-full p-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+                placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" />
+        </div>
+
+        <div class="flex flex-col gap-4 mt-8">
+            <label for="invoiceContent" class="text-xl font-semibold text-gray-800">
+                Paste Invoice Content Here:
+            </label>
+            <textarea id="invoiceContent"
+                class="w-full p-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 text-gray-700"
+                placeholder="E.g., Invoice #INV-2024-001..."></textarea>
+            <button id="runAgentBtn"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition duration-300 ease-in-out transform hover:scale-105 shadow-lg flex items-center justify-center">
+                Run Invoice Agent
+                <span id="loadingSpinner" class="loading-spinner hidden"></span>
+            </button>
+        </div>
+
+        <div class="flex flex-col gap-4 mt-8">
+            <h2 class="text-2xl font-semibold text-gray-800">Agent Output:</h2>
+            <pre id="outputArea" class="text-gray-800 text-sm"></pre>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const openaiApiKeyInput = document.getElementById('openaiApiKey');
+            const invoiceContentInput = document.getElementById('invoiceContent');
+            const runAgentBtn = document.getElementById('runAgentBtn');
+            const outputArea = document.getElementById('outputArea');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+
+            // Sample Invoices for easy testing
+            const sampleInvoiceEN = `Invoice #INV-2024-001
+Date: 2024-05-29
+Customer: Global Tech Solutions
+Description      Qty  Unit Price  Amount
+--------------------------------------
+Software License 1    100.00      100.00
+Consulting Hours 5    30.00       150.00
+--------------------------------------
+TOTAL: $250.00 USD`;
+
+            const sampleInvoiceES = `Factura #FAC-2023-11-15
+Fecha: 2023-11-15
+Cliente: Soluciones Globales
+Descripción         Cant.  Precio Unit.  Importe
+------------------------------------------------
+Licencia de Software 1    100.00 EUR    100.00 EUR
+Horas de Consultoría 5    30.00 EUR     150.00 EUR
+------------------------------------------------
+TOTAL: 250.00 EUR`;
+
+            const sampleInvoiceDE = `Rechnung #RECH-2024-03-20
+Datum: 2024-03-20
+Kunde: Deutsche Lösungen GmbH
+Beschreibung        Menge  Einzelpreis  Betrag
+-----------------------------------------------
+Softwarelizenz      1      100.00 EUR   100.00 EUR
+Beratungsstunden    5      80.00 EUR    400.00 EUR
+-----------------------------------------------
+GESAMT: 500.00 EUR`;
+
+            // Pre-fill with a sample English invoice for convenience
+            invoiceContentInput.value = sampleInvoiceEN;
+
+            runAgentBtn.addEventListener('click', async () => {
+                const openaiApiKey = openaiApiKeyInput.value.trim();
+                const invoiceContent = invoiceContentInput.value.trim();
+
+                if (!openaiApiKey) {
+                    outputArea.textContent = 'Please enter your OpenAI API Key.';
+                    return;
+                }
+                if (!invoiceContent) {
+                    outputArea.textContent = 'Please enter invoice content.';
+                    return;
+                }
+
+                outputArea.textContent = 'Processing invoice... Please wait.';
+                runAgentBtn.disabled = true;
+                loadingSpinner.classList.remove('hidden');
+
+                try {
+                    const response = await fetch('http://127.0.0.1:5000/process_invoice', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            openai_api_key: openaiApiKey, // Send the API key with the request
+                            invoice_content: invoiceContent
+                        }),
+                    });
+
+                    const result = await response.json();
+
+                    if (response.ok) {
+                        outputArea.textContent = JSON.stringify(result, null, 2);
+                    } else {
+                        outputArea.textContent = `Error: ${result.error || 'Unknown error'}`;
+                        console.error('API Error:', result);
+                    }
+                } catch (error) {
+                    outputArea.textContent = `Failed to connect to backend: ${error.message}. Ensure the Flask server is running at http://127.0.0.1:5000.`;
+                    console.error('Fetch Error:', error);
+                } finally {
+                    runAgentBtn.disabled = false;
+                    loadingSpinner.classList.add('hidden');
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>

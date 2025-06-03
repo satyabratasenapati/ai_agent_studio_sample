@@ -1,0 +1,7 @@
+langchain
+langchain-openai
+langgraph
+pydantic>=2.0.0 # Explicitly ensure Pydantic v2
+unstructured
+Flask
+Flask-CORS
